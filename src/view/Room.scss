@@ -1,0 +1,101 @@
+.room {
+  background: white;
+
+  main {
+
+    .local-video-container {
+      overflow: hidden;
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      transition: .5s;
+
+      .local-video {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: black;
+      }
+    }
+
+    .remote-video-container {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      top: 0;
+      left: 0;
+
+      .remote-video {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: black;
+
+        video {
+          position: absolute;
+          display: block;
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          transition: .3s;
+        }
+      }
+    }
+
+    .controls {
+      position: absolute;
+      bottom: 0;
+      width: 100%;
+      box-shadow: 0 0px 30px 35px rgba(0, 0, 0, 0.5);
+      background: rgba(0, 0, 0, 0.5);
+      transition: bottom .5s;
+
+      label {
+        color: #fff;
+      }
+
+      &.hidden {
+        bottom: -10em;
+      }
+
+      &.is-room-private {
+        .control {
+          &.password {
+            flex: 1;
+            min-width: 0;
+            margin-right: 0;
+            border-radius: 9999px 0 0 9999px;
+          }
+
+          &.enter {
+            min-width: 4em;
+            margin-left: 0;
+            border-radius: 0 9999px 9999px 0;
+
+            .icon {
+              display: none;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  &.entered {
+    .local-video-container {
+      overflow: hidden;
+      position: absolute;
+      width: 30%;
+      height: 0;
+      padding-bottom: 30%;
+      bottom: 1em;
+      left: 1em;
+      border-radius: 5px;
+      box-shadow: 0 0 8px 4px rgba(0, 0, 0, 0.6);
+    }
+  }
+}

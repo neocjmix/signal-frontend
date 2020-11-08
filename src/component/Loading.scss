@@ -1,0 +1,30 @@
+.loading-container{
+  .spinner{
+    position:absolute;
+    top:0;
+    left:0;
+    width:100%;
+    height: 100%;
+    background: rgba(0,0,0,0.3);
+    display:flex;
+    flex-direction: column;
+    justify-content: center;
+    z-index: 99999;
+    &:after{
+      display: block;
+      width:1em;
+      height:1em;
+      line-height: 1em;
+      text-align: center;
+      color:white;
+      font-weight: bold;
+      content: '↻';
+      font-size: 8em;
+      animation: spin infinite linear 1s;
+      margin: 0 auto;
+      padding:0.0em 0.0em 0.1em 0.0em;
+    }
+  }
+}
+
+@keyframes spin { 100%{ transform: rotate(360deg); } }

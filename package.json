@@ -2,6 +2,7 @@
   "name": "instant-video-call",
   "version": "0.1.0",
   "private": true,
+  "homepage": "/signal/",
   "dependencies": {
     "@testing-library/jest-dom": "^5.11.5",
     "@testing-library/react": "^11.1.0",
@@ -10,14 +11,17 @@
     "@types/node": "^12.19.3",
     "@types/react": "^16.9.55",
     "@types/react-dom": "^16.9.9",
+    "@types/react-router-dom": "^5.1.6",
+    "clipboard-copy": "^3.2.0",
+    "node-sass": "^4.14.1",
     "react": "^17.0.1",
     "react-dom": "^17.0.1",
+    "react-router-dom": "^5.2.0",
     "react-scripts": "4.0.0",
-    "typescript": "^4.0.5",
-    "web-vitals": "^0.2.4"
+    "typescript": "^4.0.5"
   },
   "scripts": {
-    "start": "react-scripts start",
+    "start": "react-scripts start & local-ssl-proxy --source 3001 --target 3000",
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
