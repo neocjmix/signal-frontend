@@ -1,0 +1,8 @@
+#create-result{
+  transition: .5s;
+  bottom:-300px;
+
+  &.visible{
+    bottom:0;
+  }
+}

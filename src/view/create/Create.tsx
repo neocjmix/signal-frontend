@@ -1,22 +1,35 @@
-import React, {SyntheticEvent, useState} from 'react';
+import React, {SyntheticEvent, useContext, useState} from 'react';
 import './Create.scss'
-import Loading from "../component/Loading";
-import {api, CreateRoomFormData} from "../infrastructure/api";
-import Advertisement from "../component/Advertisement";
-import { useHistory } from 'react-router-dom';
+import Loading from "../../component/Loading";
+import {api} from "../../infrastructure/api";
+import Advertisement from "../../component/Advertisement";
+import {useHistory} from 'react-router-dom';
+import {appContext} from "../../App/AppStore";
+import {ROOM_TYPE} from "../../enum";
 
 const Create = () => {
+  const {connectionId, clientId} = useContext(appContext);
   const history = useHistory();
   const [password, setPassword] = useState("");
   const [isCreatingRoom, setCreatingRoom] = useState(false);
-  const formSubmit = async (e: SyntheticEvent<HTMLFormElement>) => {
+  const formSubmit = async (e: SyntheticEvent) => {
     e.preventDefault();
     setCreatingRoom(true)
     try {
-      const fromEntries = Object.fromEntries<FormDataEntryValue>(new FormData(e.currentTarget).entries());
-      const {roomCode} = await api.createRoom(fromEntries as unknown as CreateRoomFormData);
-      history.push(`/create/${roomCode}`);
-    }finally {
+      const {roomPassword, roomType} = Object.fromEntries<FormDataEntryValue>(
+        new FormData(e.target as HTMLFormElement).entries()
+      );
+      if(connectionId == null){
+        throw new Error("no connection id.");
+      }
+      const {roomCode} = await api.createRoom({
+        clientId,
+        connectionId,
+        roomPassword: roomPassword.toString(),
+        roomType : roomType as ROOM_TYPE,
+      });
+      history.push(`/${roomCode}`);
+    } finally {
       setCreatingRoom(false);
     }
   };
@@ -30,12 +43,13 @@ const Create = () => {
           </label>
           <div className="control-group">
             <div className="flex-1">
-              <input id="room-type-audio" className="control" type="radio" name="roomType" value="video"
+              <input id="room-type-audio" className="control" type="radio" name="roomType" value={ROOM_TYPE.VIDEO}
                      defaultChecked/>
               <label htmlFor="room-type-audio">영상</label>
             </div>
             <div className="flex-1">
-              <input id="room-type-video" className="control" type="radio" name="roomType" value="audio" disabled/>
+              <input id="room-type-video" className="control" type="radio" name="roomType" value={ROOM_TYPE.AUDIO}
+                     disabled/>
               <label htmlFor="room-type-video">음성</label>
             </div>
           </div>

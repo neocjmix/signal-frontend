@@ -1,36 +1,36 @@
-let LATENCY = 1000;
+import axios from "axios";
+import {ROOM_TYPE} from "../enum";
+
+const API_ID = '9l5iwnfzf8';
+const REGION = 'ap-northeast-2';
+const STAGE = 'Prod';
+const REST_API_URL = `https://${API_ID}.execute-api.${REGION}.amazonaws.com/${STAGE}`;
 
 export interface RoomResponse {
-  roomCode: number,
-  isPrivate: boolean
+  roomType: ROOM_TYPE,
+  members: { [clientId: string]: string }
 }
 
-export interface CreateRoomFormData {
-  roomType: string,
+export interface CreateRoomRequest {
+  roomType: ROOM_TYPE,
   roomPassword: string
+  connectionId: string
+  clientId: string
 }
-
-const mock = async <T>(response: () => T | Promise<T>): Promise<T> => new Promise(resolve => {
-  const promise = Promise.resolve(typeof response === 'function' ? response() : response);
-  setTimeout(() => resolve(promise), LATENCY)
-});
 
 export const api = {
-  getRoom: (roomCode: number) => mock<RoomResponse>(() => ({
-    roomCode,
-    isPrivate: true,
-  })),
-  handleError(e: Error) {
-    console.error(e);
-    alert("🙀 오류가 발생하였습니다.")
+  fetchRoom: async ({roomCode, clientId, password, connectionId}: {
+    roomCode: string,
+    clientId: string | null,
+    connectionId: string,
+    password?: string
+  }): Promise<RoomResponse> => {
+    const {data} = await axios.post(`${REST_API_URL}/room/${roomCode}`, {password, clientId, connectionId});
+    return data;
   },
-  fetchRoomKey: ({password}: { password: string }) => mock<string>(() => {
-    if (password === '1234') return 'AWSConnectionId';
-    else throw new Error();
-  }),
-  createRoom: ({roomPassword, roomType}: CreateRoomFormData) =>
-    mock<RoomResponse>(() => ({
-      roomCode: 111111,
-      isPrivate: roomPassword !== ''
-    })),
+  async createRoom({roomPassword, roomType, connectionId, clientId}: CreateRoomRequest) {
+    const {data: roomCode} = await axios.post(`${REST_API_URL}/room`, {roomPassword, roomType, connectionId, clientId});
+    return {roomCode};
+  },
 }
+

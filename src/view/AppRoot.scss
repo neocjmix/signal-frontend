@@ -149,7 +149,6 @@ main {
 .controls {
   display: flex;
   flex-direction: column;
-  flex-wrap: wrap;
 
   label {
     margin-left: 2.5em;
@@ -160,21 +159,20 @@ main {
       color: #ff9c9c !important;
     }
 
-    + .control, + .control-group {
+    + .control {
       margin: 0 .5em 1em;
     }
   }
 
   .control {
-    margin-top: 1em;
-    margin-bottom: 1em;
+    margin-top: 0;
 
     &[type=radio] {
       height: 1em;
       width: 1em;
       font-size: 1.3em;
       position: relative;
-      margin: 1em;
+      margin: 1em 1.5em;
       vertical-align: middle;
 
       &:before {
@@ -237,10 +235,9 @@ main {
   }
 
   .control-group {
-    margin-top: 1em;
-    margin-bottom: 1em;
     display: flex;
     flex-flow: row wrap;
+    margin-bottom: 1em;
 
     > .control {
       margin: 0;

@@ -1,7 +1,7 @@
 import React from 'react'
 import {Link} from "react-router-dom"
 import './FrontPage.scss'
-import RandomEmoji from "../component/RandomEmoji";
+import RandomEmoji from "../../component/RandomEmoji";
 
 const FrontPage = () => (
   <section className="frontpage">

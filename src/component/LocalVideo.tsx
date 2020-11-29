@@ -1,13 +1,13 @@
 import React, {useCallback, useEffect, useRef, useState} from 'react';
 import './LocalVideo.scss'
+import {noop} from "../util";
 
-const LocalVideo = ({
-                      onLoad = () => {
-                      }
-                    }: { onLoad?: () => void }) => {
+type LocalVideoProps = { onLoad?: (mediaStream: MediaStream) => void, muted?: boolean };
+
+const LocalVideo = ({onLoad = noop, muted = false}: LocalVideoProps) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const mediaStream = useRef<MediaStream>();
-  const onLoadref = useRef<() => void>(onLoad);
+  const onLoadref = useRef<(mediaStream: MediaStream) => void>(onLoad);
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
@@ -19,7 +19,7 @@ const LocalVideo = ({
     if (videoElement) videoElement.srcObject = mediaStream.current;
     await new Promise(resolve => videoElement.addEventListener('play', resolve, {once: true}));
     setLoaded(true)
-    onLoadref.current();
+    onLoadref.current(mediaStream.current);
   }, []);
 
   useEffect(() => {
@@ -32,7 +32,7 @@ const LocalVideo = ({
 
   return (
     <div className={`local-video ${loaded ? '' : 'unloaded'}`}>
-      <video autoPlay muted playsInline ref={videoRef} style={{transform: `rotateY(180deg)`}}/>
+      <video autoPlay muted={muted} playsInline ref={videoRef} style={{transform: `rotateY(180deg)`}}/>
     </div>
   );
 };

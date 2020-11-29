@@ -1,20 +1,37 @@
-import React, {createContext, ReactNode, useState} from 'react';
+import React, {createContext, Dispatch, ReactNode, SetStateAction, useState} from 'react';
+import {noop} from "../util";
+import useLocalStrage from "../shared/useLocalStrage";
+import {v4 as uuidv4} from "uuid";
 
 export interface AppContext {
-  currentRoom: number | null,
-  setCurrentRoom: (currentRoom: number | null) => void
+  roomCode: string | null,
+  connectionId: string | null,
+  clientId: string,
+  setRoomCode: Dispatch<SetStateAction<string | null>>
+  setConnectionId: Dispatch<SetStateAction<string | null>>
+  setClientId: Dispatch<SetStateAction<string>>,
 }
 
 export const appContext = createContext<AppContext>({
-  currentRoom: null,
-  setCurrentRoom: () => {
-  }
+  roomCode: null,
+  connectionId: null,
+  clientId: '',
+  setRoomCode: noop,
+  setConnectionId: noop,
+  setClientId: noop,
 });
 
 const AppStore = ({children}: { children: ReactNode }) => {
-  const [currentRoom, setCurrentRoom] = useState<number | null>(null)
+  const [roomCode, setRoomCode] = useState<string | null>(null)
+  const [connectionId, setConnectionId] = useState<string | null>(null)
+  const [clientId, setClientId] = useLocalStrage('clientId', uuidv4);
+
   return (
-    <appContext.Provider value={{currentRoom, setCurrentRoom}}>
+    <appContext.Provider value={{
+      roomCode, setRoomCode,
+      connectionId, setConnectionId,
+      clientId, setClientId
+    }}>
       {children}
     </appContext.Provider>
   );
