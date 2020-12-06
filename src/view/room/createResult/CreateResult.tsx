@@ -4,11 +4,11 @@ import {appContext} from "../../../App/AppStore";
 import copy from "clipboard-copy";
 import classNames from "classnames";
 
-const getAppRootURL = () => `${window.location.protocol}//${window.location.hostname}${window.location.port ? ":" : ""}${window.location.port}${process.env.REACT_APP_BASENAME}`;
+const getAppRootURL = () => `${window.location.protocol}//${window.location.hostname}${window.location.port ? ":" : ""}`;
 
 const CreateResult = ({visible, onEnter}: { visible: boolean, onEnter: () => void }) => {
   const {roomCode} = useContext(appContext);
-  const roomURL = `${getAppRootURL()}${roomCode}`;
+  const roomURL = `${getAppRootURL()}/${roomCode}`;
   const copyURL = async () => {
     await copy(roomURL);
     alert("클립보드로 복사되었습니다.")

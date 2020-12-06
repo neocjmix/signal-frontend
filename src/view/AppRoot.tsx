@@ -78,7 +78,7 @@ const AppRoot = () => {
   return (
     <Loading isLoading={!connectionId}>
       {connectionId && (
-        <BrowserRouter basename={process.env.REACT_APP_BASENAME}>
+        <BrowserRouter>
           <div className="App">
             <Header/>
             <Popup path="/" exact disableOnFirst from={direction.LEFT}>

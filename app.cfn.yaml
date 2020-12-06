@@ -1,0 +1,85 @@
+#  https://theburningmonk.com/cloudformation-ref-and-getatt-cheatsheet/
+
+AWSTemplateFormatVersion: "2010-09-09"
+Parameters:
+  BucketName:
+    Type: String
+  Region:
+    Type: String
+Resources:
+  Bucket:
+    Type: "AWS::S3::Bucket"
+    Properties:
+      BucketName: !Ref BucketName
+
+  S3BucketPolicy:
+    Type: "AWS::S3::BucketPolicy"
+    Properties:
+      Bucket: !Ref BucketName
+      PolicyDocument:
+        Statement:
+          - Action: [ "s3:GetObject" ]
+            Effect: Allow
+            Principal: "*"
+            Resource:
+              !Join
+                - ''
+                - - !GetAtt Bucket.Arn
+                  - /*
+
+# https://aws.amazon.com/ko/premiumsupport/knowledge-center/cloudformation-origin-error/ 참조
+  CloudFrontOriginAccessIdentity:
+    Type: AWS::CloudFront::CloudFrontOriginAccessIdentity
+    Properties:
+      CloudFrontOriginAccessIdentityConfig:
+        Comment: !Sub ${AWS::StackName}
+
+  Distribution:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+#        Aliases:
+#          - !Ref DomainName
+#         S3 website is our origin, so we can have redirects
+        Origins:
+          - Id: !Sub S3-${BucketName}
+            DomainName: !GetAtt Bucket.RegionalDomainName
+            S3OriginConfig:
+              OriginAccessIdentity:
+                !Join
+                  - '/'
+                  - - origin-access-identity
+                    - cloudfront
+                    - !Ref CloudFrontOriginAccessIdentity
+
+        # Don't do any forwarding, send all through to the S3 origin.
+        CustomErrorResponses:
+          - ErrorCode: 404
+            ResponseCode: 200
+            ResponsePagePath: /index.html
+          - ErrorCode: 403
+            ResponseCode: 200
+            ResponsePagePath: /index.html
+        DefaultCacheBehavior:
+          Compress: true
+          TargetOriginId: !Sub S3-${BucketName}
+          ViewerProtocolPolicy: redirect-to-https
+          ForwardedValues:
+              QueryString: false
+        DefaultRootObject: index.html
+        Enabled: true
+        HttpVersion: http2
+#        PriceClass: PriceClass_100 # US, Canada, and Europe
+#        ViewerCertificate:
+#          AcmCertificateArn: !Ref AcmCertificateArn
+#          SslSupportMethod: sni-only
+Outputs:
+  Region:
+    Value:
+      Ref: AWS::Region
+  DistributionId:
+    Value:
+      Ref: Distribution
+  BucketName:
+    Value:
+      Ref: Bucket

@@ -1,0 +1,119 @@
+name: CI
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      region:
+        description: 'AWS Region'
+        required: true
+        default: ap-northeast-2
+
+jobs:
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Setup NodeJs
+        uses: actions/setup-node@v1
+        with:
+          node-version: 12
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Test
+        run: npm test
+
+  infra:
+    name: Deploy stack to AWS
+    runs-on: ubuntu-latest
+    needs:
+      - test
+    outputs:
+      region: ${{ steps.deployCloudFormationTemplate.outputs.Region }}
+      bucketName: ${{ steps.deployCloudFormationTemplate.outputs.BucketName }}
+      distributionId: ${{ steps.deployCloudFormationTemplate.outputs.DistributionId }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Import .env
+        id: importEnv
+        uses: falti/dotenv-action@v0.2.5
+
+      - name: Configure environment name
+        id: setEnv
+        run: |
+          APP_NAME=`echo ${{ github.repository }} | tr "/" "-"`
+          echo "AppName: $APP_NAME"
+          echo "InputRegion: $INPUT_REGION"
+          echo "::set-output name=appName::$APP_NAME"
+          echo "::set-output name=inputRegion::$INPUT_REGION"
+
+      - name: Configure AWS credentials
+        id: creds
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ steps.setEnv.outputs.inputRegion || steps.importEnv.outputs.react_app_region }}
+
+      - name: Deploy cloud formation template
+        id: deployCloudFormationTemplate
+        uses: aws-actions/aws-cloudformation-github-deploy@v1.0.3
+        with:
+          name: ${{ steps.setEnv.outputs.appName }}
+          template: app.cfn.yaml
+          no-fail-on-empty-changeset: "1"
+          parameter-overrides: >-
+            BucketName=${{ steps.setEnv.outputs.appName }},
+            Region=${{ steps.setEnv.outputs.region }}
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs:
+      - test
+      - infra
+    steps:
+      - name: Infra Outputs
+        run: |
+          echo "region: ${{ needs.infra.outputs.region }}"
+          echo "bucketName: ${{ needs.infra.outputs.bucketName }}"
+          echo "distributionId: ${{ needs.infra.outputs.distributionId }}"
+
+      - name: Configure AWS credentials
+        id: creds
+        uses: aws-actions/configure-aws-credentials@v1
+
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ needs.infra.outputs.region }}
+
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Deploy
+        uses: reggionick/s3-deploy@v3
+        with:
+          folder: build
+          bucket: ${{ needs.infra.outputs.bucketName }}
+          bucket-region: ${{ needs.infra.outputs.region }}
+          dist-id: ${{ needs.infra.outputs.distributionId }}
+          invalidation: /
+          delete-removed: true
+          no-cache: true
+          private: true

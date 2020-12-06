@@ -1,8 +1,6 @@
-const API_ID = `j2wt0t4ra7`;
-const REGION = `ap-northeast-2`;
-const STAGE = `production`;
+const {REACT_APP_WEB_SOCKET_ID, REACT_APP_REGION, REACT_APP_STAGE} = process.env
+const WEB_SOCKET_API_URL = `wss://${REACT_APP_WEB_SOCKET_ID}.execute-api.${REACT_APP_REGION}.amazonaws.com/${REACT_APP_STAGE}`;
 
-const WEB_SOCKET_API_URL = `wss://${API_ID}.execute-api.${REGION}.amazonaws.com/${STAGE}/`;
 const socket = new WebSocket(WEB_SOCKET_API_URL);
 
 export class NoConnectionIdError implements Error {

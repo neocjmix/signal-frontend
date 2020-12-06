@@ -92,7 +92,7 @@ export class WebRTCUtil {
   }
 
   private waitStable() {
-    return new Promise(resolve => {
+    return new Promise<void>(resolve => {
       if (this.rtcPeerConnection.signalingState === "stable") {
         return resolve();
       }

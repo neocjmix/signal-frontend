@@ -1,10 +1,8 @@
 import axios from "axios";
 import {ROOM_TYPE} from "../enum";
 
-const API_ID = '9l5iwnfzf8';
-const REGION = 'ap-northeast-2';
-const STAGE = 'Prod';
-const REST_API_URL = `https://${API_ID}.execute-api.${REGION}.amazonaws.com/${STAGE}`;
+const {REACT_APP_API_ID, REACT_APP_REGION, REACT_APP_STAGE} = process.env
+const REST_API_URL = `https://${REACT_APP_API_ID}.execute-api.${REACT_APP_REGION}.amazonaws.com/${REACT_APP_STAGE}`;
 
 export interface RoomResponse {
   roomType: ROOM_TYPE,

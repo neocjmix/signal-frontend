@@ -1,6 +1,4 @@
 import React, {useCallback, useContext, useEffect, useState} from 'react';
-// @ts-ignore
-import useQueryString from 'use-query-string';
 import './Room.scss'
 import Advertisement from '../../component/Advertisement';
 import {appContext} from "../../App/AppStore";
@@ -13,7 +11,7 @@ import RemoteVideo from "../../component/RemoteVideo";
 import classNames from "classnames";
 import {WebRTCUtil} from "../../infrastructure/WebRTCUtil";
 import {handleError} from "../../infrastructure/ErrorHandler";
-import {useHistory, useLocation} from 'react-router-dom';
+import {useHistory} from 'react-router-dom';
 import {ERRORS} from '../../enum';
 
 const getRemoteConnectionId = (room: RoomResponse, localClientId: string) => Object
@@ -24,7 +22,6 @@ const getRemoteConnectionId = (room: RoomResponse, localClientId: string) => Obj
 const Room = () => {
   const {roomCode, connectionId, clientId} = useContext(appContext);
   const history = useHistory();
-  const location = useLocation();
 
   const [passwordError, setPasswordError] = useState(false);
   const [isPrivateRoom, setPrivateRoom] = useState(false);
@@ -35,12 +32,11 @@ const Room = () => {
   const [isConnected, setIsConnected] = useState(false);
   const [remoteConnectionId, setRemoteConnectionId] = useState<string | null>(null);
   const [localMediaStream, setLocalMediaStream] = useState<MediaStream | null>(null);
-  const [{isEntered}, _setEntered] = useQueryString(location, history.replace);
-  const setEntered = (isEntered: boolean) => _setEntered({isEntered})
+  const [isEntered, setEntered] = useState(false);
   const [webRTCUtil, setWebRTCUtil] = useState<WebRTCUtil>();
 
   useEffect(() => {
-    const webRTCUtilIntance = new WebRTCUtil({
+    const webRTCUtilInstance = new WebRTCUtil({
       iceServerUrls: [
         "stun:stun.l.google.com:19302",
         "stun:stun1.l.google.com:19302",
@@ -52,8 +48,8 @@ const Room = () => {
       onConnect: () => setIsConnected(true),
       onError: handleError,
     });
-    setWebRTCUtil(webRTCUtilIntance)
-    return () => webRTCUtilIntance.destroy();
+    setWebRTCUtil(webRTCUtilInstance)
+    return () => webRTCUtilInstance.destroy();
   }, [])
 
   useEffect(() => {

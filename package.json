@@ -1,8 +1,7 @@
 {
-  "name": "instant-video-call",
+  "name": "signal-frontend",
   "version": "0.1.0",
   "private": true,
-  "homepage": "/signal/",
   "dependencies": {
     "@testing-library/jest-dom": "^5.11.5",
     "@testing-library/react": "^11.1.0",
@@ -18,19 +17,18 @@
     "classnames": "^2.2.6",
     "clipboard-copy": "^3.2.0",
     "node-sass": "^4.14.1",
+    "prevent-default": "^1.0.0",
     "react": "^17.0.1",
     "react-dom": "^17.0.1",
     "react-router-dom": "^5.2.0",
-    "react-scripts": "4.0.0",
-    "typescript": "^4.0.5",
-    "use-query-string": "^2.2.0",
-    "uuid": "^3.4.0",
-    "prevent-default": "^1.0.0"
+    "react-scripts": "^4.0.1",
+    "typescript": "^4.1.2",
+    "uuid": "^3.4.0"
   },
   "scripts": {
     "start": "react-scripts start & local-ssl-proxy --source 3001 --target 3000",
     "build": "react-scripts build",
-    "test": "react-scripts test",
+    "test": "react-scripts test --passWithNoTests",
     "eject": "react-scripts eject"
   },
   "eslintConfig": {
