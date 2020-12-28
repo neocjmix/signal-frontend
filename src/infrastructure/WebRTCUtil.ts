@@ -46,18 +46,32 @@ export class WebRTCUtil {
     this.remoteMediaStream = new MediaStream();
     this.rtcPeerConnection = new RTCPeerConnection({iceServers: [{urls: iceServerUrls}]})
 
-    this.rtcPeerConnection.addEventListener('negotiationneeded', () => this.sendOffer())
+    this.rtcPeerConnection.addEventListener(
+      'signalingstatechange',
+      () => {
+        console.log(new Date(), 'signalingstatechange', this.rtcPeerConnection.signalingState);
+      },
+    )
+
+    this.rtcPeerConnection.addEventListener('negotiationneeded', () => {
+      console.log(new Date(), 'negotiationneeded');
+      return this.sendOffer();
+    })
 
     this.rtcPeerConnection.addEventListener('track', async ({track}) => {
+      console.log(new Date(), 'track');
       await this.waitStable()
+      console.log(new Date(), 'addTrack');
       this.remoteMediaStream.addTrack(track)
     })
 
     this.rtcPeerConnection.addEventListener('icecandidate', ({candidate}) => {
+      console.log(new Date(), 'icecandidate');
       if (candidate != null) return this.sendIceCandidate(candidate)
     });
 
     this.rtcPeerConnection.addEventListener('connectionstatechange', () => {
+      console.log(new Date(), 'connectionstatechange', this.rtcPeerConnection.connectionState);
       switch (this.rtcPeerConnection.connectionState) {
         case "connected":
           onConnect()
@@ -72,12 +86,14 @@ export class WebRTCUtil {
     })
 
     this.listeningCancelers.push(onMessage('ICE', async candidateInit => {
+      console.log(new Date(), 'ICE');
       if (!candidateInit) return;
       await this.waitStable();
       await this.rtcPeerConnection.addIceCandidate(new RTCIceCandidate(candidateInit));
     }));
 
     this.listeningCancelers.push(onMessage('SDP', async (descriptionInit, from) => {
+      console.log(new Date(), 'SDP', descriptionInit?.type, from);
       this.options.remoteConnectionId = from;
       const rtcSessionDescription = new RTCSessionDescription(descriptionInit);
       try {
@@ -116,6 +132,7 @@ export class WebRTCUtil {
     try {
       const rtcSessionDescriptionInit = await this.rtcPeerConnection.createAnswer();
       await this.rtcPeerConnection.setLocalDescription(rtcSessionDescriptionInit);
+      console.log(new Date(), 'sendAnswer');
       await sendMessage(this.options.remoteConnectionId, 'SDP', rtcSessionDescriptionInit);
     } catch (e) {
       this.options.onError(e)
@@ -128,6 +145,7 @@ export class WebRTCUtil {
     try {
       const rtcSessionDescriptionInit = await this.rtcPeerConnection.createOffer({iceRestart: true});
       await this.rtcPeerConnection.setLocalDescription(rtcSessionDescriptionInit);
+      console.log(new Date(), 'sendOffer');
       await sendMessage(this.options.remoteConnectionId, 'SDP', rtcSessionDescriptionInit)
     } catch (e) {
       this.options.onError(e)
@@ -140,7 +158,8 @@ export class WebRTCUtil {
 
   addLocalMediaStream(mediaStream: MediaStream) {
     this.localMediaStream = mediaStream;
-    if(this.rtcPeerConnection.signalingState === "closed") return;
+    if (this.rtcPeerConnection.signalingState === "closed") return;
+    console.log(new Date(), 'addLocalMediaStream');
     mediaStream.getTracks()
       .sort((a, b) => a.kind > b.kind ? 1 : -1)
       .forEach(track => this.rtcPeerConnection.addTrack(track));
