@@ -46,6 +46,10 @@ export class WebRTCUtil {
     this.remoteMediaStream = new MediaStream();
     this.rtcPeerConnection = new RTCPeerConnection({iceServers: [{urls: iceServerUrls}]})
 
+    this.rtcPeerConnection.addEventListener("iceconnectionstatechange", ev => {
+      console.log(Date.now(), 'iceconnectionstatechange', this.rtcPeerConnection.iceConnectionState);
+    }, false);
+
     this.rtcPeerConnection.addEventListener(
       'signalingstatechange',
       () => {
