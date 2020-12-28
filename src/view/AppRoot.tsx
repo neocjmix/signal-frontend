@@ -9,6 +9,13 @@ import Room from "./room/Room";
 import {appContext, AppContext} from "../App/AppStore";
 import {getConnectionId} from "../infrastructure/message";
 import Loading from "../component/Loading";
+import WebFont from "webfontloader";
+
+WebFont.load({
+  google: {
+    families: ['Sacramento']
+  }
+});
 
 export interface RoomParams {
   code: string,
