@@ -9,15 +9,15 @@ import LocalVideo from "../../component/LocalVideo";
 import JoinRoom from "./joinRoom/JoinRoom";
 import RemoteVideo from "../../component/RemoteVideo";
 import classNames from "classnames";
-import {WebRTCUtil} from "../../infrastructure/WebRTCUtil";
-import {handleError} from "../../infrastructure/ErrorHandler";
+import {WebRTCConnection} from "../../infrastructure/WebRTCConnection";
+import {handleGlobalError} from "../../infrastructure/ErrorHandler";
 import {useHistory} from 'react-router-dom';
 import {ERRORS} from '../../enum';
 
-const getRemoteConnectionId = (room: RoomResponse, localClientId: string) => Object
+const getRemoteConnectionInfo = (room: RoomResponse, localClientId: string) => Object
   .entries(room.members)
-  .filter(([roomClientId]) => roomClientId !== localClientId)
-  .map(([, connectionId]) => connectionId)[0];
+  .map(([roomClientId, connectionId]) => ({roomClientId, connectionId}))
+  .find(({roomClientId}) => roomClientId !== localClientId)
 
 const Room = () => {
   const {roomCode, connectionId, clientId} = useContext(appContext);
@@ -30,45 +30,51 @@ const Room = () => {
   const [isRoomFetching, setRoomFetching] = useState(false);
   const [isRoomOpener, setIsRoomOpener] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
+  const [remoteClientId, setRemoteClientId] = useState<string | null>(null);
   const [remoteConnectionId, setRemoteConnectionId] = useState<string | null>(null);
   const [localMediaStream, setLocalMediaStream] = useState<MediaStream | null>(null);
   const [isEntered, setEntered] = useState(false);
-  const [webRTCUtil, setWebRTCUtil] = useState<WebRTCUtil>();
+  const [webRTCConnection, setWebRTCConnection] = useState<WebRTCConnection>();
 
-  useEffect(() => {
-    const webRTCUtilInstance = new WebRTCUtil({
-      iceServerUrls: [
-        "stun:stun.l.google.com:19302",
-        "stun:stun1.l.google.com:19302",
-        "stun:stun2.l.google.com:19302",
-        "stun:stun3.l.google.com:19302",
-        "stun:stun4.l.google.com:19302",
-      ],
-      onDisconnect: () => setIsConnected(false),
-      onConnect: () => setIsConnected(true),
-      onError: handleError,
-    });
-    setWebRTCUtil(webRTCUtilInstance)
-    return () => webRTCUtilInstance.destroy();
-  }, [])
-
+  // room preserving
   useEffect(() => {
     if (!roomCode || !connectionId) return
     const intervalId = setInterval(() => api.fetchRoom({roomCode, clientId, connectionId}), 60 * 1000);
     return () => clearInterval(intervalId)
   }, [roomCode, connectionId, isEntered, clientId])
 
+  // create webRTCConnection
   useEffect(() => {
-    if (webRTCUtil && isEntered && localMediaStream) {
-      webRTCUtil.addLocalMediaStream(localMediaStream)
-    }
-  }, [isEntered, localMediaStream, webRTCUtil])
+    if (!connectionId || !clientId) return;
+    const webRTCConnectionInstance = new WebRTCConnection({
+      localClientId: clientId,
+      localConnectionId: connectionId,
+      onDisconnect: () => setIsConnected(false),
+      onConnect: () => setIsConnected(true),
+      onError: handleGlobalError,
+      iceServerUrls: [
+        "stun:stun.l.google.com:19302",
+        "stun:stun1.l.google.com:19302",
+        "stun:stun2.l.google.com:19302",
+        "stun:stun3.l.google.com:19302",
+        "stun:stun4.l.google.com:19302",
+      ]
+    });
+    setWebRTCConnection(webRTCConnectionInstance)
+    return () => webRTCConnectionInstance.disconnect();
+  }, [clientId, connectionId])
+
+  // connect to remote
+  useEffect(() => {
+    if (!webRTCConnection || !isEntered || !remoteConnectionId || !remoteClientId) return;
+    webRTCConnection.connect(remoteConnectionId, remoteClientId)
+  }, [isRoomOpener, isEntered, remoteConnectionId, webRTCConnection, remoteClientId])
 
   useEffect(() => {
-    if (webRTCUtil && isEntered && remoteConnectionId) {
-      webRTCUtil?.connect(remoteConnectionId)
+    if (webRTCConnection && isEntered && localMediaStream) {
+      webRTCConnection.addLocalMediaStream(localMediaStream)
     }
-  }, [isRoomOpener, isEntered, remoteConnectionId, webRTCUtil])
+  }, [isEntered, localMediaStream, webRTCConnection])
 
   const fetchRoom = useCallback(async ({roomCode, clientId, connectionId, password = ''}: {
     roomCode: string,
@@ -76,49 +82,56 @@ const Room = () => {
     connectionId: string
     password?: string
   }) => {
-    if (!webRTCUtil) return;
+    if (!webRTCConnection) return;
     setRoomFetching(true)
     try {
       const room = await api.fetchRoom({roomCode, clientId, connectionId, password});
-      const remoteConnectionId = getRemoteConnectionId(room, clientId);
-      if (remoteConnectionId) {
+      const {
+        connectionId: remoteConnectionId,
+        roomClientId: remoteClientId
+      } = getRemoteConnectionInfo(room, clientId) || {};
+      if (remoteConnectionId && remoteClientId) {
         setRemoteConnectionId(remoteConnectionId)
+        setRemoteClientId(remoteClientId)
       } else {
         setIsRoomOpener(true)
       }
     } finally {
       setRoomFetching(false)
     }
-  }, [webRTCUtil]);
+  }, [webRTCConnection]);
+
+  const handleError = useCallback((e: any) => {
+    switch (e?.response?.status) {
+      case 403:
+        if (e?.response?.data === ERRORS.ROOM_IS_FULL) {
+          setTimeout(() => {
+            alert("이미 다른 사람이 접속한 방입니다.")
+            history.push("/join")
+          }, 400)
+          return;
+        } else {
+          setPrivateRoom(true);
+          return;
+        }
+      case 404:
+        setTimeout(() => {
+          alert("없는 방입니다.")
+          history.push("/join")
+        }, 400)
+        return;
+      default:
+        return handleGlobalError(e)
+    }
+  }, [history]);
 
   useEffect(() => {
-    if (roomCode != null && webRTCUtil != null && connectionId != null) {
-      fetchRoom({roomCode, clientId, connectionId}).catch(e => {
-        console.log(e?.response?.data, ERRORS.ROOM_IS_FULL);
-        switch (e?.response?.status) {
-          case 403:
-            if (e?.response?.data === ERRORS.ROOM_IS_FULL) {
-              setTimeout(() => {
-                alert("이미 다른 사람이 접속한 방입니다.")
-                history.push("/join")
-              }, 400)
-              return;
-            } else {
-              setPrivateRoom(true);
-              return;
-            }
-          case 404:
-            setTimeout(() => {
-              alert("없는 방입니다.")
-              history.push("/join")
-            }, 400)
-            return;
-          default:
-            return handleError(e)
-        }
-      });
-    }
-  }, [clientId, connectionId, fetchRoom, history, roomCode, webRTCUtil])
+    if (roomCode == null) return;
+    if (webRTCConnection == null) return;
+    if (connectionId == null) return;
+
+    fetchRoom({roomCode, clientId, connectionId}).catch(handleError);
+  }, [clientId, connectionId, fetchRoom, handleError, history, roomCode, webRTCConnection])
 
   return <>
     <section className={classNames("room", {entered: isEntered})}>
@@ -130,9 +143,9 @@ const Room = () => {
           }} muted/>
         </Loading>
         {
-          (isEntered && webRTCUtil && (
+          (isEntered && webRTCConnection && (
             <Loading isLoading={!isRemoteVideoLoaded} className="remote-video-container">
-              <RemoteVideo loading={!isConnected} mediaStream={webRTCUtil.remoteMediaStream}
+              <RemoteVideo loading={!isConnected} mediaStream={webRTCConnection.remoteMediaStream}
                            onLoad={() => setRemoteVideoLoaded(true)}/>
             </Loading>
           )) ||
@@ -150,7 +163,7 @@ const Room = () => {
                       needPassword={isPrivateRoom} passwordError={passwordError}
                       onEnter={async password => {
                         setPasswordError(false);
-                        if (roomCode != null && webRTCUtil != null && connectionId != null) {
+                        if (roomCode != null && webRTCConnection != null && connectionId != null) {
                           try {
                             await fetchRoom({connectionId, clientId, roomCode, password})
                             setEntered(true);

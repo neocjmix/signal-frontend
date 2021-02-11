@@ -4,7 +4,7 @@ import {appContext} from "../../../App/AppStore";
 import copy from "clipboard-copy";
 import classNames from "classnames";
 
-const getAppRootURL = () => `${window.location.protocol}//${window.location.hostname}${window.location.port ? ":" : ""}`;
+const getAppRootURL = () => `${window.location.protocol}//${window.location.hostname}${window.location.port ? `:${window.location.port}` : ""}`;
 
 const CreateResult = ({visible, onEnter}: { visible: boolean, onEnter: () => void }) => {
   const {roomCode} = useContext(appContext);
