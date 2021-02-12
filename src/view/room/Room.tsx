@@ -164,7 +164,7 @@ const Room = () => {
 
   return <>
     {mode === 'dev' && (
-      <pre style={{position:'fixed', top:'3em', left:'1em', zIndex: 999999999, color:'white', fontSize: '.5em'}}>
+      <pre style={{position:'fixed', top:'3em', left:'1em', zIndex: 999999999, color:'white', fontSize: '.2em'}}>
         roomCode: {''+ roomCode}<br/>
         clientId: {''+ clientId}<br/>
         remoteClientId: {''+ remoteClientId}<br/>
