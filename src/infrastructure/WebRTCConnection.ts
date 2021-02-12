@@ -30,7 +30,6 @@ export class WebRTCConnection {
   private remoteConnectionId: string | null = null;
   private remoteClientId: string | null = null;
   private negotiationneeded: boolean = false;
-  private isCaller: boolean = false;
   private readonly listeningCancelers: (() => void)[] = []
   private readonly localConnectionId: string;
   private readonly localClientId: string;
@@ -129,10 +128,12 @@ export class WebRTCConnection {
   }
 
   private exchangeSDP = async () => {
-    if (this.remoteConnectionId == null) return;
+    if (this.remoteConnectionId == null || this.remoteClientId == null) return;
     if (!this.negotiationneeded) return;
+    const isCaller = this.remoteClientId > this.localClientId;
+    console.log(`isCaller : ${isCaller}`);
     try {
-      if (this.isCaller){
+      if (isCaller){
         console.log('offer');
         const rtcSessionDescriptionInit = await this.rtcPeerConnection.createOffer({iceRestart: true});
         await this.rtcPeerConnection.setLocalDescription(rtcSessionDescriptionInit);
@@ -177,12 +178,6 @@ export class WebRTCConnection {
     }
     this.remoteConnectionId = remoteConnectionId
     this.remoteClientId = remoteClientId
-    this.isCaller = this.remoteClientId > this.localClientId
-    console.log(`isCaller : ${this.isCaller}`);
-    await sendMessage(this.remoteConnectionId, 'CONNECTION_ID', JSON.stringify({
-      connectionId: this.localConnectionId,
-      clientId: this.localClientId
-    }));
     await this.exchangeSDP();
   }
 
@@ -201,7 +196,6 @@ export class WebRTCConnection {
       if (canceler) canceler();
     }
     this.remoteConnectionId = null;
-    this.isCaller = false;
     this.rtcPeerConnection.close();
   }
 }
