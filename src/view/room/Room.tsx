@@ -164,7 +164,7 @@ const Room = () => {
 
   return <>
     {mode === 'dev' && (
-      <pre style={{position:'fixed', top:'3em', left:'1em', zIndex: 999999999, color:'white', fontSize: '.2em'}}>
+      <div style={{fontFamily:'monospace', position:'fixed', top:'3em', left:'1em', zIndex: 999999999, color:'white', fontSize: '.3em'}}>
         roomCode: {''+ roomCode}<br/>
         clientId: {''+ clientId}<br/>
         remoteClientId: {''+ remoteClientId}<br/>
@@ -184,7 +184,7 @@ const Room = () => {
           <Fragment key={key}>{key}: {''+value}<br/></Fragment>)}
           <hr/>
         {logs.slice(-20).map((s, i) => <Fragment key={i}>{s}<br/></Fragment>)}
-      </pre>
+      </div>
     )}
     <section className={classNames("room", {entered: isEntered})}>
       <Loading tag="main" isLoading={isRoomFetching}>
