@@ -172,7 +172,6 @@ export class WebRTCConnection {
   connect = async (remoteConnectionId: string | null, remoteClientId: string | null) => {
     console.log('connect');
     if (remoteConnectionId == null || remoteClientId == null) return;
-    if (this.remoteConnectionId === remoteConnectionId) return;
     if (this.remoteClientId && this.remoteClientId !== remoteClientId) {
       throw new IlligalStateError("cannot change remote client");
     }
