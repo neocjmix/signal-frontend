@@ -70,7 +70,7 @@ export class WebRTCConnection {
     this.rtcPeerConnection.addEventListener('negotiationneeded', async () => {
       console.log('negotiationneeded');
       this.negotiationneeded = true;
-      await this.exchangeSDP();
+      await this.connect(this.remoteConnectionId, this.remoteClientId);
     });
 
     this.rtcPeerConnection.addEventListener('track', async ({track}) => {
@@ -169,7 +169,7 @@ export class WebRTCConnection {
     }
   }
 
-  connect = async (remoteConnectionId: string, remoteClientId: string) => {
+  connect = async (remoteConnectionId: string | null, remoteClientId: string | null) => {
     console.log('connect');
     if (remoteConnectionId == null || remoteClientId == null) return;
     if (this.remoteConnectionId === remoteConnectionId) return;
