@@ -1,4 +1,4 @@
-import React, {useCallback, useContext, useEffect, useState} from 'react';
+import React, {Fragment, useCallback, useContext, useEffect, useRef, useState} from 'react';
 import './Room.scss'
 import Advertisement from '../../component/Advertisement';
 import {appContext} from "../../App/AppStore";
@@ -23,6 +23,9 @@ const Room = () => {
   const {roomCode, connectionId, clientId} = useContext(appContext);
   const history = useHistory();
 
+  const [mode, setMode] = useState('prod');
+  const [states, setStates] = useState({});
+  const [eventName, setEventName] = useState('');
   const [passwordError, setPasswordError] = useState(false);
   const [isPrivateRoom, setPrivateRoom] = useState(false);
   const [isLocalVideoLoaded, setLocalVideoLoaded] = useState(false);
@@ -35,6 +38,28 @@ const Room = () => {
   const [localMediaStream, setLocalMediaStream] = useState<MediaStream | null>(null);
   const [isEntered, setEntered] = useState(false);
   const [webRTCConnection, setWebRTCConnection] = useState<WebRTCConnection>();
+  const [logs, setLogs] = useState<string[]>([]);
+
+  useEffect(() => {
+    const queryParam = Object.fromEntries(window.location.search
+      .replace(/^\?/,'')
+      .split("&")
+      .map(param => param.split("=")));
+    setMode(queryParam?.mode)
+  }, [])
+
+  useEffect(() => {
+    if(mode === 'dev'){
+      const temp = window.console.log;
+      window.console.log = (...args:any[]) => {
+        const date = new Date();
+        setLogs(logs => logs.concat(date.toLocaleString() + `.${date.getMilliseconds()}\t` + args.join()))
+        return temp(...args);
+      }
+    }
+  }, [mode])
+
+
 
   // room preserving
   useEffect(() => {
@@ -58,7 +83,11 @@ const Room = () => {
         "stun:stun2.l.google.com:19302",
         "stun:stun3.l.google.com:19302",
         "stun:stun4.l.google.com:19302",
-      ]
+      ],
+      onStateChange: (states, eventName) => {
+        setStates(states);
+        setEventName(eventName);
+      }
     });
     setWebRTCConnection(webRTCConnectionInstance)
     return () => webRTCConnectionInstance.disconnect();
@@ -134,6 +163,29 @@ const Room = () => {
   }, [clientId, connectionId, fetchRoom, handleError, history, roomCode, webRTCConnection])
 
   return <>
+    {mode === 'dev' && (
+      <pre style={{position:'fixed', top:'3em', left:'1em', zIndex: 999999999, color:'white', fontSize: '1em'}}>
+        roomCode: {''+ roomCode}<br/>
+        clientId: {''+ clientId}<br/>
+        remoteClientId: {''+ remoteClientId}<br/>
+        connectionId: {''+ connectionId}<br/>
+        remoteConnectionId: {''+ remoteConnectionId}<br/>
+        eventName: {''+ eventName}<br/>
+        passwordError: {''+ passwordError}<br/>
+        isPrivateRoom: {''+ isPrivateRoom}<br/>
+        isLocalVideoLoaded: {''+ isLocalVideoLoaded}<br/>
+        isRemoteVideoLoaded: {''+ isRemoteVideoLoaded}<br/>
+        isRoomFetching: {''+ isRoomFetching}<br/>
+        isRoomOpener: {''+ isRoomOpener}<br/>
+        isConnected: {''+ isConnected}<br/>
+        localMediaStream: {''+ localMediaStream}<br/>
+        isEntered: {''+ isEntered}<br/>
+        {Object.entries(states).map(([key, value]) =>
+          <Fragment key={key}>{key}: {''+value}<br/></Fragment>)}
+          <hr/>
+        {logs.slice(-20).map((s, i) => <Fragment key={i}>{s}<br/></Fragment>)}
+      </pre>
+    )}
     <section className={classNames("room", {entered: isEntered})}>
       <Loading tag="main" isLoading={isRoomFetching}>
         <Loading isLoading={!isLocalVideoLoaded} className="local-video-container">

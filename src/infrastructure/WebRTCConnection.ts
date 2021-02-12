@@ -68,22 +68,25 @@ export class WebRTCConnection {
     });
 
     this.rtcPeerConnection.addEventListener('negotiationneeded', async () => {
+      console.log('negotiationneeded');
       this.negotiationneeded = true;
       await this.exchangeSDP();
     });
 
     this.rtcPeerConnection.addEventListener('track', async ({track}) => {
+      console.log('remote track');
       this.remoteMediaStream.addTrack(track)
     });
 
     this.rtcPeerConnection.addEventListener('connectionstatechange', () => {
+      console.log(`connectionState : ${this.rtcPeerConnection.connectionState}`);
       switch (this.rtcPeerConnection.connectionState) {
         case "connected":
-          return onConnect()
+          return this.onConnect()
         case "disconnected":
-          return onDisconnect()
+          return this.onDisconnect()
         case "failed":
-          return onFail()
+          return this.onFail()
       }
     });
 
@@ -130,6 +133,7 @@ export class WebRTCConnection {
     if (!this.negotiationneeded) return;
     try {
       if (this.isCaller){
+        console.log('offer');
         const rtcSessionDescriptionInit = await this.rtcPeerConnection.createOffer({iceRestart: true});
         await this.rtcPeerConnection.setLocalDescription(rtcSessionDescriptionInit);
         await sendMessage(this.remoteConnectionId, 'SDP', rtcSessionDescriptionInit)
@@ -147,6 +151,7 @@ export class WebRTCConnection {
   private sendAnswer = async () => {
     if (this.remoteConnectionId == null) return;
     try {
+      console.log('answer');
       const rtcSessionDescriptionInit = await this.rtcPeerConnection.createAnswer();
       await this.rtcPeerConnection.setLocalDescription(rtcSessionDescriptionInit);
       await sendMessage(this.remoteConnectionId, 'SDP', rtcSessionDescriptionInit);
@@ -165,6 +170,7 @@ export class WebRTCConnection {
   }
 
   connect = async (remoteConnectionId: string, remoteClientId: string) => {
+    console.log('connect');
     if (remoteConnectionId == null || remoteClientId == null) return;
     if (this.remoteConnectionId === remoteConnectionId) return;
     if (this.remoteClientId && this.remoteClientId !== remoteClientId) {
@@ -173,6 +179,7 @@ export class WebRTCConnection {
     this.remoteConnectionId = remoteConnectionId
     this.remoteClientId = remoteClientId
     this.isCaller = this.remoteClientId > this.localClientId
+    console.log(`isCaller : ${this.isCaller}`);
     await sendMessage(this.remoteConnectionId, 'CONNECTION_ID', JSON.stringify({
       connectionId: this.localConnectionId,
       clientId: this.localClientId
@@ -183,6 +190,7 @@ export class WebRTCConnection {
   addLocalMediaStream = (mediaStream: MediaStream) => {
     this.localMediaStream = mediaStream;
     if (this.rtcPeerConnection.signalingState === "closed") return;
+    console.log('local track');
     mediaStream.getTracks()
       .sort((a, b) => a.kind > b.kind ? 1 : -1)
       .forEach(track => this.rtcPeerConnection.addTrack(track));
