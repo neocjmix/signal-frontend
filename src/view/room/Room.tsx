@@ -1,4 +1,4 @@
-import React, {Fragment, useCallback, useContext, useEffect, useRef, useState} from 'react';
+import React, {Fragment, useCallback, useContext, useEffect, useState} from 'react';
 import './Room.scss'
 import Advertisement from '../../component/Advertisement';
 import {appContext} from "../../App/AppStore";
