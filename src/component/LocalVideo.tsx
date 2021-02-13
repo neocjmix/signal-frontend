@@ -7,19 +7,14 @@ type LocalVideoProps = { onLoad?: (mediaStream: MediaStream) => void, muted?: bo
 const LocalVideo = ({onLoad = noop, muted = false}: LocalVideoProps) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const mediaStream = useRef<MediaStream>();
-  const onLoadref = useRef<(mediaStream: MediaStream) => void>(onLoad);
   const [loaded, setLoaded] = useState(false);
-
-  useEffect(() => {
-    onLoadref.current = onLoad
-  }, [onLoad])
 
   const initVideo = useCallback(async (videoElement: HTMLVideoElement) => {
     mediaStream.current = await navigator.mediaDevices.getUserMedia({video: true, audio: true})
     if (videoElement) videoElement.srcObject = mediaStream.current;
     await new Promise(resolve => videoElement.addEventListener('play', resolve, {once: true}));
     setLoaded(true)
-    onLoadref.current(mediaStream.current);
+    onLoad(mediaStream.current);
   }, []);
 
   useEffect(() => {

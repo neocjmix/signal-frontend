@@ -20,10 +20,10 @@ const getRemoteConnectionInfo = (room: RoomResponse, localClientId: string) => O
   .find(({roomClientId}) => roomClientId !== localClientId)
 
 const Room = () => {
-  const {roomCode, connectionId, clientId} = useContext(appContext);
+  const {roomCode, connectionId, clientId, mode} = useContext(appContext);
   const history = useHistory();
 
-  const [mode, setMode] = useState('prod');
+
   const [states, setStates] = useState({});
   const [eventName, setEventName] = useState('');
   const [passwordError, setPasswordError] = useState(false);
@@ -39,14 +39,6 @@ const Room = () => {
   const [isEntered, setEntered] = useState(false);
   const [webRTCConnection, setWebRTCConnection] = useState<WebRTCConnection>();
   const [logs, setLogs] = useState<string[]>([]);
-
-  useEffect(() => {
-    const queryParam = Object.fromEntries(window.location.search
-      .replace(/^\?/,'')
-      .split("&")
-      .map(param => param.split("=")));
-    setMode(queryParam?.mode)
-  }, [])
 
   useEffect(() => {
     if(mode === 'dev'){
@@ -162,6 +154,11 @@ const Room = () => {
     fetchRoom({roomCode, clientId, connectionId}).catch(handleError);
   }, [clientId, connectionId, fetchRoom, handleError, history, roomCode, webRTCConnection])
 
+  const onLocalVideoLoad = useCallback(mediaStream => {
+    setLocalVideoLoaded(true);
+    setLocalMediaStream(mediaStream)
+  }, []);
+
   return <>
     {mode === 'dev' && (
       <div style={{fontFamily:'monospace', position:'fixed', top:'3em', left:'1em', zIndex: 999999999, color:'white', fontSize: '.3em'}}>
@@ -189,10 +186,7 @@ const Room = () => {
     <section className={classNames("room", {entered: isEntered})}>
       <Loading tag="main" isLoading={isRoomFetching}>
         <Loading isLoading={!isLocalVideoLoaded} className="local-video-container">
-          <LocalVideo onLoad={mediaStream => {
-            setLocalVideoLoaded(true);
-            setLocalMediaStream(mediaStream)
-          }} muted/>
+          <LocalVideo onLoad={onLocalVideoLoad} muted/>
         </Loading>
         {
           (isEntered && webRTCConnection && (

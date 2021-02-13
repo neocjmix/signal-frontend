@@ -10,6 +10,7 @@ import {appContext, AppContext} from "../App/AppStore";
 import {getConnectionId} from "../infrastructure/message";
 import Loading from "../component/Loading";
 import WebFont from "webfontloader";
+import FullScreenToggler from "../shared/FullScreenToggler";
 
 WebFont.load({
   google: {
@@ -83,28 +84,30 @@ const AppRoot = () => {
   }, [setConnectionId])
 
   return (
-    <Loading isLoading={!connectionId}>
-      {connectionId && (
-        <BrowserRouter>
-          <div className="App">
-            <Header/>
-            <Popup path="/" exact disableOnFirst from={direction.LEFT}>
-              <FrontPage/>
-            </Popup>
-            <Popup path="/join" from={direction.RIGHT}>
-              <Join/>
-            </Popup>
-            <Popup path="/create" from={direction.RIGHT}>
-              <Create/>
-            </Popup>
-            <Route path="/:code(\d+)" component={CodeSetter}/>
-            <Popup path="/:code(\d+)" from={direction.RIGHT}>
-              <Room/>
-            </Popup>
-          </div>
-        </BrowserRouter>
-      )}
-    </Loading>
+    <FullScreenToggler>
+      <Loading isLoading={!connectionId}>
+        {connectionId && (
+          <BrowserRouter>
+            <div className="App">
+              <Header/>
+              <Popup path="/" exact disableOnFirst from={direction.LEFT}>
+                <FrontPage/>
+              </Popup>
+              <Popup path="/join" from={direction.RIGHT}>
+                <Join/>
+              </Popup>
+              <Popup path="/create" from={direction.RIGHT}>
+                <Create/>
+              </Popup>
+              <Route path="/:code(\d+)" component={CodeSetter}/>
+              <Popup path="/:code(\d+)" from={direction.RIGHT}>
+                <Room/>
+              </Popup>
+            </div>
+          </BrowserRouter>
+        )}
+      </Loading>
+    </FullScreenToggler>
   );
 };
 
