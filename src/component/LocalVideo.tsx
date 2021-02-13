@@ -15,7 +15,7 @@ const LocalVideo = ({onLoad = noop, muted = false}: LocalVideoProps) => {
     await new Promise(resolve => videoElement.addEventListener('play', resolve, {once: true}));
     setLoaded(true)
     onLoad(mediaStream.current);
-  }, []);
+  }, [onLoad]);
 
   useEffect(() => {
     if (videoRef.current) initVideo(videoRef?.current)
