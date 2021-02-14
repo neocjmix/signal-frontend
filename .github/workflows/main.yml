@@ -104,7 +104,7 @@ jobs:
         run: npm ci
 
       - name: Build
-        run: npm run build
+        run: CI=false npm run build
 
       - name: Deploy
         uses: reggionick/s3-deploy@v3

@@ -16,12 +16,12 @@
     "axios": "^0.21.0",
     "classnames": "^2.2.6",
     "clipboard-copy": "^3.2.0",
-    "node-sass": "^4.14.1",
     "prevent-default": "^1.0.0",
     "react": "^17.0.1",
     "react-dom": "^17.0.1",
     "react-router-dom": "^5.2.0",
     "react-scripts": "^4.0.1",
+    "sass": "^1.32.7",
     "typescript": "^4.1.2",
     "uuid": "^3.4.0",
     "webfontloader": "^1.6.28"
@@ -52,12 +52,15 @@
   },
   "devDependencies": {
     "@types/webfontloader": "^1.6.32",
-    "husky": "^5.0.9",
+    "husky": "^4.3.8",
     "lint-staged": "^10.5.4"
   },
   "husky": {
     "hooks": {
       "pre-commit": "lint-staged"
     }
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx}": "eslint --fix"
   }
 }
