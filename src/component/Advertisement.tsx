@@ -3,9 +3,8 @@ import './Advertizement.scss'
 import {appContext} from "../App/AppStore";
 
 const Advertisement = () => {
-  const {setMode} = useContext(appContext);
   return (
-    <div className="advertisement" onDoubleClick={() => setMode(mode => mode === 'prod' ? 'dev' : 'prod')}>
+    <div className="advertisement" >
       광고영역
     </div>
   );

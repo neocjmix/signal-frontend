@@ -1,46 +1,67 @@
-const {REACT_APP_WEB_SOCKET_ID, REACT_APP_REGION, REACT_APP_STAGE} = process.env
+import {GlobalLogger} from "../component/Log";
+
+const {REACT_APP_WEB_SOCKET_ID, REACT_APP_REGION, REACT_APP_STAGE} = process.env;
 const WEB_SOCKET_API_URL = `wss://${REACT_APP_WEB_SOCKET_ID}.execute-api.${REACT_APP_REGION}.amazonaws.com/${REACT_APP_STAGE}`;
+const RECONNECT_INTERVAL = 1000;
+const NOOP = () => {};
 
-const socket = new WebSocket(WEB_SOCKET_API_URL);
+type ConnectHandler = (connectionId: string) => void;
+type MessageHandler = ({message, from}: {message: any, from: string}) => void;
+type OnMessageCallback = (payload: any, from: string) => void;
 
-export class NoConnectionIdError implements Error {
-  message: string = 'connection id not set.';
-  name: string = 'NoConnectionIdError';
-}
+let socket:WebSocket;
+let waitForConnected:Promise<Event>;
+let handleMessage:MessageHandler = NOOP;
+let handleConnect:ConnectHandler = NOOP;
 
-export const waitForConnected = new Promise(resolve => socket.addEventListener('open', resolve));
+(async function connect() {
+  socket = new WebSocket(WEB_SOCKET_API_URL);
+  socket.addEventListener('message', ({data}) => handleMessage(JSON.parse(data)));
+  socket.addEventListener('close',() => {
+    GlobalLogger.log(`Socket is closed. Reconnect will be attempted in ${RECONNECT_INTERVAL}ms.`);
 
-export const sendMessage = async (connectionId: string | null, type: string, payload: any) => {
-  if (connectionId === null) throw new NoConnectionIdError();
+    setTimeout(() => {
+      GlobalLogger.log('reconnecting...');
+      connect();
+    }, RECONNECT_INTERVAL);
+  })
+
+  waitForConnected = new Promise<Event>(resolve => socket.addEventListener('open', e => {
+    GlobalLogger.log('ws connected');
+    resolve(e);
+  }))
+
   await waitForConnected;
-  const data = JSON.stringify({
+
+  socket.send(''); //아무 메시지나 보내서 응답에 있는 connectionId를 promise로 넘겨준다.
+  socket.addEventListener('message', e => handleConnect(JSON.parse(e.data).connectionId), {once: true});
+})();
+
+export const sendMessage = async (connectionId: string, type: string, payload: any) => {
+  await waitForConnected;
+  socket.send(JSON.stringify({
     connectionId,
     message: {
       type,
       payload
     }
-  });
-  socket.send(data);
+  }));
 };
 
-type OnMessageCallback = (payload: any, from: string) => void;
-
-export const onMessage = (type: string, callback: OnMessageCallback) => {
-  const listener = ({data}: { data: string }) => {
-    const {message, from} = JSON.parse(data);
-    if (message == null) return;
-    if (message.type === type) callback(message.payload, from); // 메시지, 상대방의 connectionId를 callback으로 넘겨준다.
-  };
-  socket.addEventListener('message', listener);
-  return () => socket.removeEventListener('message', listener);
+export const onMessage = (type: string | number, callback: OnMessageCallback) => {
+  const prevMessageHandler = handleMessage;
+  handleMessage = ({message, from}) => {
+    prevMessageHandler({message, from});
+    if (message?.type === type) callback(message?.payload, from);
+  }
+  return () => callback = NOOP
 };
 
-export const getConnectionId = async (): Promise<string> => {
-  await waitForConnected;
-
-  //아무 메시지나 보내서 응답에 있는 connectionId를 promise로 넘겨준다.
-  socket.send('');
-  return new Promise(resolve => {
-    socket.addEventListener('message', e => resolve(JSON.parse(e.data).connectionId), {once: true});
-  });
+export const onConnect = (callback: ConnectHandler) => {
+  const prevConnectHandler = handleConnect;
+  handleConnect = (connectionId:string) => {
+    prevConnectHandler(connectionId);
+    callback(connectionId);
+  }
+  return () => callback = NOOP
 };

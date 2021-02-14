@@ -1,5 +1,7 @@
 import {onMessage, sendMessage} from "./message";
 import {noop, throwError} from "../util";
+import {GlobalLogger} from "../component/Log";
+
 
 type WebRTCConnectionStates = {
   remoteMediaStream: MediaStreamTrack[] | undefined,
@@ -38,7 +40,7 @@ export class WebRTCConnection {
   private readonly onDisconnect: () => void;
   private readonly onFail: () => void;
   private readonly onError: (error: Error) => void;
-  remoteMediaStream: MediaStream;
+  public remoteMediaStream: MediaStream;
 
   constructor({
                 localConnectionId,
@@ -67,18 +69,18 @@ export class WebRTCConnection {
     });
 
     this.rtcPeerConnection.addEventListener('negotiationneeded', async () => {
-      console.log('negotiationneeded');
+      GlobalLogger.log('negotiationneeded');
       this.negotiationneeded = true;
-      await this.connect(this.remoteConnectionId, this.remoteClientId);
+      await this.reconnect();
     });
 
     this.rtcPeerConnection.addEventListener('track', async ({track}) => {
-      console.log('remote track');
+      GlobalLogger.log('remote track');
       this.remoteMediaStream.addTrack(track)
     });
 
     this.rtcPeerConnection.addEventListener('connectionstatechange', () => {
-      console.log(`connectionState : ${this.rtcPeerConnection.connectionState}`);
+      GlobalLogger.log(`connectionState : ${this.rtcPeerConnection.connectionState}`);
       switch (this.rtcPeerConnection.connectionState) {
         case "connected":
           return this.onConnect()
@@ -131,28 +133,36 @@ export class WebRTCConnection {
     if (this.remoteConnectionId == null || this.remoteClientId == null) return;
     if (!this.negotiationneeded) return;
     const isCaller = this.remoteClientId > this.localClientId;
-    console.log(`isCaller : ${isCaller}`);
-    try {
-      if (isCaller){
-        console.log('offer');
+    GlobalLogger.log(`isCaller : ${isCaller}`);
+
+    if (isCaller) {
+      GlobalLogger.log('offer');
+      try {
         const rtcSessionDescriptionInit = await this.rtcPeerConnection.createOffer({iceRestart: true});
         await this.rtcPeerConnection.setLocalDescription(rtcSessionDescriptionInit);
         await sendMessage(this.remoteConnectionId, 'SDP', rtcSessionDescriptionInit)
-      }else{
-        await sendMessage(this.remoteConnectionId, 'CONNECTION_ID', JSON.stringify({
-          connectionId: this.localConnectionId,
-          clientId: this.localClientId
-        }));
+      } catch (e) {
+        this.onError(e)
       }
-    } catch (e) {
-      this.onError(e)
+    } else {
+      if (this.remoteConnectionId != null) {
+        try {
+          GlobalLogger.log('request offer');
+          await sendMessage(this.remoteConnectionId, 'CONNECTION_ID', JSON.stringify({
+            connectionId: this.localConnectionId,
+            clientId: this.localClientId
+          }))
+        } catch (e) {
+          this.onError(e)
+        }
+      }
     }
   }
 
   private sendAnswer = async () => {
     if (this.remoteConnectionId == null) return;
     try {
-      console.log('answer');
+      GlobalLogger.log('answer');
       const rtcSessionDescriptionInit = await this.rtcPeerConnection.createAnswer();
       await this.rtcPeerConnection.setLocalDescription(rtcSessionDescriptionInit);
       await sendMessage(this.remoteConnectionId, 'SDP', rtcSessionDescriptionInit);
@@ -170,9 +180,8 @@ export class WebRTCConnection {
     }
   }
 
-  connect = async (remoteConnectionId: string | null, remoteClientId: string | null) => {
-    console.log('connect');
-    if (remoteConnectionId == null || remoteClientId == null) return;
+  connect = async (remoteConnectionId: string, remoteClientId: string) => {
+    GlobalLogger.log('connect');
     if (this.remoteClientId && this.remoteClientId !== remoteClientId) {
       throw new IlligalStateError("cannot change remote client");
     }
@@ -181,10 +190,15 @@ export class WebRTCConnection {
     await this.exchangeSDP();
   }
 
+  reconnect = () => {
+    if (this.remoteConnectionId == null || this.remoteClientId == null) return;
+    return this.connect(this.remoteConnectionId, this.remoteClientId);
+  }
+
   addLocalMediaStream = (mediaStream: MediaStream) => {
     this.localMediaStream = mediaStream;
     if (this.rtcPeerConnection.signalingState === "closed") return;
-    console.log('local track');
+    GlobalLogger.log('local track');
     mediaStream.getTracks()
       .sort((a, b) => a.kind > b.kind ? 1 : -1)
       .forEach(track => this.rtcPeerConnection.addTrack(track));

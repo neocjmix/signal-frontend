@@ -1,5 +1,5 @@
-import React, {Fragment, useCallback, useContext, useEffect, useState} from 'react';
 import './Room.scss'
+import React, {CSSProperties, useCallback, useContext, useEffect, useState} from 'react';
 import Advertisement from '../../component/Advertisement';
 import {appContext} from "../../App/AppStore";
 import {api, RoomResponse} from "../../infrastructure/api";
@@ -13,6 +13,18 @@ import {WebRTCConnection} from "../../infrastructure/WebRTCConnection";
 import {handleGlobalError} from "../../infrastructure/ErrorHandler";
 import {useHistory} from 'react-router-dom';
 import {ERRORS} from '../../enum';
+import {Log, loggerContext} from "../../component/Log";
+
+const LOG_STYLE: CSSProperties = {
+  fontFamily: 'monospace',
+  position: 'fixed',
+  top: '3em',
+  left: '1em',
+  zIndex: 999999999,
+  color: 'white',
+  fontSize: '.3em',
+  whiteSpace: 'nowrap'
+};
 
 const getRemoteConnectionInfo = (room: RoomResponse, localClientId: string) => Object
   .entries(room.members)
@@ -20,9 +32,9 @@ const getRemoteConnectionInfo = (room: RoomResponse, localClientId: string) => O
   .find(({roomClientId}) => roomClientId !== localClientId)
 
 const Room = () => {
-  const {roomCode, connectionId, clientId, mode} = useContext(appContext);
   const history = useHistory();
-
+  const {roomCode, connectionId, clientId} = useContext(appContext);
+  const {log, setShowLog} = useContext(loggerContext);
 
   const [states, setStates] = useState({});
   const [eventName, setEventName] = useState('');
@@ -38,22 +50,8 @@ const Room = () => {
   const [localMediaStream, setLocalMediaStream] = useState<MediaStream | null>(null);
   const [isEntered, setEntered] = useState(false);
   const [webRTCConnection, setWebRTCConnection] = useState<WebRTCConnection>();
-  const [logs, setLogs] = useState<string[]>([]);
 
-  useEffect(() => {
-    if(mode === 'dev'){
-      const temp = window.console.log;
-      window.console.log = (...args:any[]) => {
-        const date = new Date();
-        setLogs(logs => logs.concat(date.toLocaleString() + `.${date.getMilliseconds()}\t` + args.join()))
-        return temp(...args);
-      }
-    }
-  }, [mode])
-
-
-
-  // room preserving
+  // keep room
   useEffect(() => {
     if (!roomCode || !connectionId) return
     const intervalId = setInterval(() => api.fetchRoom({roomCode, clientId, connectionId}), 60 * 1000);
@@ -66,16 +64,21 @@ const Room = () => {
     const webRTCConnectionInstance = new WebRTCConnection({
       localClientId: clientId,
       localConnectionId: connectionId,
-      onDisconnect: () => setIsConnected(false),
-      onConnect: () => setIsConnected(true),
-      onError: handleGlobalError,
-      iceServerUrls: [
-        "stun:stun.l.google.com:19302",
-        "stun:stun1.l.google.com:19302",
-        "stun:stun2.l.google.com:19302",
-        "stun:stun3.l.google.com:19302",
-        "stun:stun4.l.google.com:19302",
-      ],
+      onConnect: () => {
+        if (webRTCConnectionInstance.remoteMediaStream.getTracks().length === 0) {
+          webRTCConnectionInstance.reconnect()
+        }
+        setIsConnected(true)
+      },
+      onDisconnect: () => {
+        webRTCConnectionInstance.reconnect();
+      },
+      onFail: () => setIsConnected(false),
+      onError: error => {
+        log(error);
+        webRTCConnectionInstance.reconnect()
+      },
+      iceServerUrls: process.env?.REACT_APP_STUN_SERVERS?.split(','),
       onStateChange: (states, eventName) => {
         setStates(states);
         setEventName(eventName);
@@ -83,7 +86,7 @@ const Room = () => {
     });
     setWebRTCConnection(webRTCConnectionInstance)
     return () => webRTCConnectionInstance.disconnect();
-  }, [clientId, connectionId])
+  }, [clientId, connectionId, log])
 
   // connect to remote
   useEffect(() => {
@@ -160,29 +163,18 @@ const Room = () => {
   }, []);
 
   return <>
-    {mode === 'dev' && (
-      <div style={{fontFamily:'monospace', position:'fixed', top:'3em', left:'1em', zIndex: 999999999, color:'white', fontSize: '.3em'}}>
-        roomCode: {''+ roomCode}<br/>
-        clientId: {''+ clientId}<br/>
-        remoteClientId: {''+ remoteClientId}<br/>
-        connectionId: {''+ connectionId}<br/>
-        remoteConnectionId: {''+ remoteConnectionId}<br/>
-        eventName: {''+ eventName}<br/>
-        passwordError: {''+ passwordError}<br/>
-        isPrivateRoom: {''+ isPrivateRoom}<br/>
-        isLocalVideoLoaded: {''+ isLocalVideoLoaded}<br/>
-        isRemoteVideoLoaded: {''+ isRemoteVideoLoaded}<br/>
-        isRoomFetching: {''+ isRoomFetching}<br/>
-        isRoomOpener: {''+ isRoomOpener}<br/>
-        isConnected: {''+ isConnected}<br/>
-        localMediaStream: {''+ localMediaStream}<br/>
-        isEntered: {''+ isEntered}<br/>
-        {Object.entries(states).map(([key, value]) =>
-          <Fragment key={key}>{key}: {''+value}<br/></Fragment>)}
-          <hr/>
-        {logs.slice(-20).map((s, i) => <Fragment key={i}>{s}<br/></Fragment>)}
-      </div>
-    )}
+    {/*<Log style={LOG_STYLE}*/}
+    {/*     state={{*/}
+    {/*       roomCode,*/}
+    {/*       clientId,*/}
+    {/*       remoteClientId,*/}
+    {/*       connectionId,*/}
+    {/*       remoteConnectionId,*/}
+    {/*       eventName,*/}
+    {/*       passwordError,*/}
+    {/*       localMediaStream,*/}
+    {/*       ...states,*/}
+    {/*     }}/>*/}
     <section className={classNames("room", {entered: isEntered})}>
       <Loading tag="main" isLoading={isRoomFetching}>
         <Loading isLoading={!isLocalVideoLoaded} className="local-video-container">
@@ -222,7 +214,9 @@ const Room = () => {
         }
       </Loading>
       <footer>
-        <Advertisement/>
+        <div onCopy={() => setShowLog(prevState => !prevState)}>
+          <Advertisement/>
+        </div>
       </footer>
     </section>
   </>;

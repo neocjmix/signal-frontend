@@ -7,10 +7,11 @@ import Create from "./create/Create";
 import {BrowserRouter, Link, Redirect, Route, Switch, useParams} from "react-router-dom";
 import Room from "./room/Room";
 import {appContext, AppContext} from "../App/AppStore";
-import {getConnectionId} from "../infrastructure/message";
+import {onConnect} from "../infrastructure/message";
 import Loading from "../component/Loading";
 import WebFont from "webfontloader";
 import FullScreenToggler from "../shared/FullScreenToggler";
+import {LogScope} from "../component/Log";
 
 WebFont.load({
   google: {
@@ -80,7 +81,10 @@ const AppRoot = () => {
   const {setConnectionId, connectionId} = useContext<AppContext>(appContext);
 
   useEffect(() => {
-    getConnectionId().then(setConnectionId)
+    const removeHandler = onConnect(setConnectionId);
+    return () => {
+      removeHandler()
+    }
   }, [setConnectionId])
 
   return (
@@ -101,7 +105,9 @@ const AppRoot = () => {
               </Popup>
               <Route path="/:code(\d+)" component={CodeSetter}/>
               <Popup path="/:code(\d+)" from={direction.RIGHT}>
-                <Room/>
+                <LogScope>
+                  <Room/>
+                </LogScope>
               </Popup>
             </div>
           </BrowserRouter>
